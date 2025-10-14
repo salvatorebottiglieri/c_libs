@@ -1,5 +1,5 @@
 #include "../include/net.h"
-#include "sep_log.h"
+#include "../../log/include/sep_log.h"
 
 #include <stdbool.h>
 #include <sys/socket.h>

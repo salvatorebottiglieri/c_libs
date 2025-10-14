@@ -1,5 +1,5 @@
 #include "sep_string.h"
-#include "sep_log.h"
+#include "../../log/include/sep_log.h"
 
 #include <stdio.h>
 #include <ctype.h>

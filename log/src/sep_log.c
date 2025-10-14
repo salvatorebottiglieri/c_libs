@@ -22,7 +22,6 @@
 void s_log(int level, const char* format, ...){
     
     time_t current_time;
-    char* time_string;
     struct tm* time_info;
     char timestamp[20];
     char buffer[1024];

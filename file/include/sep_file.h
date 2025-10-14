@@ -1,7 +1,7 @@
 #ifndef FILE_H
 #define FILE_H
 
-#include "sep_string.h"
+#include "../../string/include/sep_string.h"
 
 typedef struct{
     String *path;

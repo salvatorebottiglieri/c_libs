@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 
-#include "sep_string.h"
+#include "../../string/include/sep_string.h"
 
 /**
  * Peer represents a peer in the network. It contains

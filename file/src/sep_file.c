@@ -1,6 +1,5 @@
-#include "sep_file.h"
-#include "sep_log.h"
-#include "sep_string.h"
+#include "../include/sep_file.h"
+#include "../../log/include/sep_log.h"
 
 #include <fcntl.h>
 #include <unistd.h>
