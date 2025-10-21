@@ -2,9 +2,8 @@
 #define NET_H
 
 #include <stdint.h>
+#include <stdbool.h>
 #include <sys/types.h>
-
-#include "../../string/include/sep_string.h"
 
 /**
  * Peer represents a peer in the network. It contains
@@ -17,22 +16,32 @@
  * @field port The port number of the peer
  */
 typedef struct {
-    char name[256]; //256 bytes
     char* id; // 8 byte
-    int sockfd; // 8 byte
+    char *pal; // 8 byte
+    int out_connection_socket_fd; // 8 byte
+    int listening_socket_fd; // 8 byte
+    int in_connection_socket_fd; // 8 byte
+    size_t clilen; 
     const char* ip; // 8 byte 
     uint16_t port; // 2 bytes
+    char name[256]; //256 bytes
+    char buffer[512]; //512 bytes
+
 }Peer;
 
-typedef struct ConnectionParams_{
-    int listen_port;
+typedef struct {
+    const char* ip;
+    uint16_t port;
 }ConnectionParams;
 
 
 
-int connect_to(Peer* peer);
+int connect_to(Peer *self,Peer* peer);
 int is_alive(Peer* peer);
-bool are_connected(Peer* self, Peer* peer);
+void become_a_receiver(Peer *self);
+ConnectionParams* get_peer_from(char *id);
+
+bool is_connected_to(Peer* self, char* peer_id);
 ssize_t send_to(Peer* peer, char* data, size_t size);
 void* accept_connections(void* arg);
 

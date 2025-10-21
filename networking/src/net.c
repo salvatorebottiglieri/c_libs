@@ -1,6 +1,4 @@
-#include "../include/net.h"
-#include "../../log/include/sep_log.h"
-
+#include "../include/sep_net.h"
 #include <stdbool.h>
 #include <sys/socket.h>
 #include <stdlib.h>
@@ -19,10 +17,14 @@
 #define SEND_BUFFER_SIZE 512
 
 /*------------------------------------------- HELPER FUNCTIONS ---------------------------------------------------- */
-bool is_valid(Peer* peer){
-    if (peer->name == 0 || peer->id == 0 || peer->ip == 0 || peer->port == 0){
-        return false;
-    }
+
+/**
+ * Checks if a given Peer object is valid.
+ * A Peer object is considered valid if its name, id, ip and port are not null.
+ * @param peer The Peer object to check
+ * @return true if the Peer object is valid, false otherwise
+ */
+bool is_valid(char *peer_id){
     return true;
 }
 
@@ -43,35 +45,79 @@ int close_socket(int sockfd){
     return 0;
 }
 
-/*------------------------------------------- HELPER FUNCTIONS  ---------------------------------------------------- */
+
+/*------------------------------------------- FUNCTIONS RESERVED TO ACCESS POINTS ---------------------------------------------------- */
+
+bool is_part_of_the_net(char *peer_id){
+    return false;
+    
+}
+
+
+
+
+/*------------------------------------------- PUBLIC API ---------------------------------------------------- */
+
+bool is_connected_to(Peer* self, Peer* peer2){
+    return strcmp(self->pal, peer2->id) == 0;
+    
+}
+
+void become_a_receiver(Peer *self){
+    int sockfd;
+    struct sockaddr_in servaddr, cliaddr;
+    socklen_t clilen;
+
+    sockfd = create_socket(AF_INET);
+    if (sockfd < 0){
+        perror("socket creation failed");
+    }
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    servaddr.sin_port = htons(self->port);
+
+    if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+        perror("bind failed");
+    }
+
+    if (listen(sockfd, 10) < 0) {
+        perror("listen failed");
+    }
+
+    clilen = sizeof(cliaddr);
+    self->in_connection_socket_fd = sockfd;
+    self->clilen = clilen;
+}
+
 
 
 /**
- * Establishes a connection to the given peer.
- * @param peer The peer to connect to.
- * @return The socket file descriptor of the connection, or -1 if the connection failed.
+ * Connects to a peer identified by the given id.
+ * The function creates a new socket using AF_INET and connects to the peer using the peer's ip and port.
+ * If the connection is successful, the socket file descriptor is stored in the self->out_connection_socket_fd field.
+ * @param self The Peer object to connect from
+ * @param peer_id The id of the peer to connect to
+ * @return 0 if the connection is successful, -1 otherwise
  */
-int connect_to(Peer* peer){
-    if (is_valid(peer) == false){
-        return -1;
-    }
+int connect_to(Peer *self,char* peer_id){
+    if (!is_valid(peer_id)){return -1;}
+    Peer* peer = get_peer_from(peer_id);
     struct sockaddr_in servaddr;
     int socket = create_socket(AF_INET);
     if (socket < 0){
         return -1;
     }
-    peer->sockfd = socket;
+    self->out_connection_socket_fd = socket;
     servaddr.sin_family = AF_INET;
     servaddr.sin_port = htons(peer->port);
     inet_pton(AF_INET, peer->ip, &(servaddr.sin_addr));
-    if(connect(peer->sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-        close_socket(peer->sockfd);
-        peer->sockfd = -1;
+    if(connect(self->out_connection_socket_fd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+        close_socket(self->out_connection_socket_fd);
+        self->out_connection_socket_fd = -1;
         return -1;
     }
-    s_log(INFO, "Connection established to peer: %s", peer->name);
 
-    return peer->sockfd;  
+    return 0;
 }
 
 
@@ -80,20 +126,22 @@ int connect_to(Peer* peer){
 ssize_t send_to(Peer* peer, char* data, size_t size){
     char* buffer = data;
     size_t num_of_sending = 1;
-    ssize_t bytes_sended = 0; 
+    ssize_t bytes_sended = 0;
+    size_t bytes_to_send = SEND_BUFFER_SIZE;
 
-
-    if (size > SEND_BUFFER_SIZE){
-        buffer = malloc(sizeof(char)*SEND_BUFFER_SIZE);
-        num_of_sending = size/SEND_BUFFER_SIZE;
+    if (size > bytes_to_send){
+        num_of_sending = size / bytes_to_send;
     }
 
     for (size_t i = 0; i < num_of_sending; i++){
-        ssize_t chunk_sent = send(peer->sockfd, buffer, SEND_BUFFER_SIZE, 0);
-        if (chunk_sent < 0) {
-            perror("send failed");
-            return -1;
+
+        ssize_t chunk_sent = send(peer->out_connection_socket_fd, buffer+bytes_sended, bytes_to_send, 0);
+        if (chunk_sent < 0) {perror("send failed");return -1;}
+
+        if((size - bytes_sended) < SEND_BUFFER_SIZE){
+            bytes_to_send = size - bytes_sended;
         }
+
         bytes_sended += chunk_sent;
         
     }
@@ -102,32 +150,15 @@ ssize_t send_to(Peer* peer, char* data, size_t size){
 }
 
 
+
 void* accept_connections(void* arg){
-    ConnectionParams* params = (ConnectionParams*) arg;
-    int sockfd, connfd;
-    struct sockaddr_in servaddr, cliaddr;
-    socklen_t clilen;
-    char buffer[256];
 
-    sockfd = create_socket(AF_INET);
-    if (sockfd < 0){
-        pthread_exit(NULL);
-    }
-    servaddr.sin_family = AF_INET;
-    servaddr.sin_addr.s_addr = htonl(INADDR_ANY);
-    servaddr.sin_port = htons(params->listen_port);
-
-    if (bind(sockfd, (struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
-        perror("bind failed");
-        pthread_exit(NULL);
-    }
-
-    if (listen(sockfd, 3) < 0) {
-        perror("listen failed");
-        pthread_exit(NULL);
-    }
-
-    clilen = sizeof(cliaddr);
+    Peer *self = (Peer*) arg;
+    int sockfd = self->in_connection_socket_fd;
+    char *buffer = self->buffer;
+    struct sockaddr_in cliaddr;
+    socklen_t clilen = self->clilen;
+    int connfd;
 
     while(1){
         connfd = accept(sockfd, (struct sockaddr *)&cliaddr, &clilen);
@@ -135,17 +166,14 @@ void* accept_connections(void* arg){
             perror("accept failed");
             pthread_exit(NULL);
         }
-        int n = read(connfd, buffer, 255);
+        int n = read(connfd, buffer, 512);
         if (n < 0) {
             perror("read failed");
             pthread_exit(NULL);
         }
 
 
-        printf("Received message: %s\n", new_s(buffer, n)->data);    
     }
-
-
     close(connfd);
     close(sockfd);
 }

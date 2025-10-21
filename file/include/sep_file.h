@@ -1,7 +1,7 @@
 #ifndef FILE_H
 #define FILE_H
 
-#include "../../string/include/sep_string.h"
+#include <sep_string.h>
 
 typedef struct{
     String *path;
@@ -15,7 +15,9 @@ typedef struct{
 
 
 SFile *s_open(const char *path);
+bool s_close(SFile* file);
 size_t s_read(SFile* file);
+SFile** get_files_from(const char *dir);
 
 
 

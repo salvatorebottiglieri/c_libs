@@ -28,6 +28,10 @@ lib$(LIB_NAME).a: $(OBJS)
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
+test: all
+	gcc -Wall -Wextra -o test $(SRCS) -Iinclude -L. -l$(LIB_NAME) && ./test
+
+
 # Target per l'installazione
 install: all
 	@echo "Installando libreria e header in /usr/local..."
