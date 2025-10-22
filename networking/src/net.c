@@ -53,7 +53,9 @@ bool is_part_of_the_net(char *peer_id){
     
 }
 
-
+ConnectionParams* get_peer_from(char *peer_id){
+    return NULL;
+}
 
 
 /*------------------------------------------- PUBLIC API ---------------------------------------------------- */

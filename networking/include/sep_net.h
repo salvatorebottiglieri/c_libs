@@ -26,7 +26,6 @@ typedef struct {
     uint16_t port; // 2 bytes
     char name[256]; //256 bytes
     char buffer[512]; //512 bytes
-
 }Peer;
 
 typedef struct {
@@ -36,12 +35,12 @@ typedef struct {
 
 
 
-int connect_to(Peer *self,Peer* peer);
+int connect_to(Peer *self,char* peer_id);
 int is_alive(Peer* peer);
 void become_a_receiver(Peer *self);
 ConnectionParams* get_peer_from(char *id);
 
-bool is_connected_to(Peer* self, char* peer_id);
+bool is_connected_to(Peer* self, Peer* peer2);
 ssize_t send_to(Peer* peer, char* data, size_t size);
 void* accept_connections(void* arg);
 
