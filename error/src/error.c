@@ -24,6 +24,7 @@ void add_to_stacktrace(ErrorState *error_state, const char *message, const char 
 
 void print_error_element(void* element){
     Error_Element *error_element = (Error_Element*) element;
+    printf("SONO QUI ");
     printf("%s:%s:%d\n", error_element->module, error_element->function, error_element->line_number);
 
 }

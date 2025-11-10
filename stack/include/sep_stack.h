@@ -3,6 +3,7 @@
 
 
 #include <stdlib.h>
+#include <unistd.h>
 
 typedef void (*print_stack_elem)(void*);
 
@@ -20,7 +21,7 @@ typedef struct {
 
 
 Stack* create_stack();
-void push_stack(Stack* stack, void* data);
+int push_stack(Stack* stack, void* data);
 void* top_stack(Stack* stack);
 void* pop_stack(Stack* stack);
 void free_stack(Stack* stack);

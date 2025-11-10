@@ -45,22 +45,29 @@ void free_stack(Stack* stack){
  * @param stack The Stack object to push onto
  * @param data The element to push onto the Stack
  */
-void push_stack(Stack* stack, void* data){
-    if (stack == NULL) return;
-    
+int push_stack(Stack* stack, void* data){
+    if (stack == NULL) return -1;
+    void** new_address=NULL;
+
     if (stack->size == stack->capacity){
         stack->capacity *= 2;
-        stack->data = realloc(stack->data, stack->capacity*stack->elem_size);
-        if (stack->data == NULL) return;
+        new_address = realloc(stack->data, stack->capacity*stack->elem_size);
+        if (new_address == NULL) return -1;
+        if (new_address != stack->data){
+            stack->data = new_address;
+            //put head back to the address of the last item of the stack
+            stack->head = ((size_t) new_address) + ((stack->size-1) * stack->elem_size);
+
+        }
+        
 
     }
-    // head points to the next free memory location
+    // head points to the next free memory location to accept the new adding element
     if (stack->size != 0)stack->head = ((size_t) stack->head) + stack->elem_size;
-    
-
     
     memcpy(stack->head, &data, stack->elem_size);
     stack->size += 1;
+    return 0;
 }
 
 /**
@@ -123,21 +130,89 @@ void print_test_element(void* element){
     printf("a: %d, b: %c\n", t->a, t->b);
 }
 
-//only for debugging
-int main(){
+
+typedef struct {
+    const char *function;
+    int         line_number;
+    const char *module;
+    const char* message;
+}Error_Element;
 
 
+typedef struct {
+    Stack *stacktrace;
 
-    struct test t1 = {1, 'a'};
-    struct test t2 = {2, 'b'};
+}ErrorState;
 
-    Stack* stack = create_stack();
-    push_stack(stack, &t1);
-    push_stack(stack, &t2);
-    print_stack(stack, print_test_element);
-    free_stack(stack);
+
+void init_error_state(ErrorState *error_state){
+    error_state->stacktrace = create_stack(sizeof(Error_Element));
+}
+
+void add_to_stacktrace(ErrorState *error_state, const char *message, const char *function, int line_number, const char *module){
+    if (error_state->stacktrace == NULL) return;
+    Error_Element *error_element = (Error_Element*) malloc(sizeof(Error_Element));
+    if (error_element == NULL) return;
+    error_element->function = function;
+    error_element->line_number = line_number;
+    error_element->module = module;
+    error_element->message = message;
+    push_stack(error_state->stacktrace, error_element);
+}
+
+ErrorState error_state = {
+    .stacktrace = NULL
+};
+
+void print_error_element(void* element){
+    Error_Element *error_element = (Error_Element*) element;
+    printf("%s:%s:%d\n", error_element->module, error_element->function, error_element->line_number);
+
+}
+
+void print_stacktrace(ErrorState *error_state){
+    if (error_state->stacktrace == NULL) return;
+
+    print_stack(error_state->stacktrace, print_error_element);
+}
+
+int f3(void){
+    printf("f3\n");
+    if ( 1 == 1){
+        add_to_stacktrace(&error_state, "error in f3",__func__,__LINE__, __FILE__);
+        return -1;
+    }
+    return 0;
+
+}
+
+int f2(void){
+    printf("f2\n");
+    if (f3() == -1){
+        add_to_stacktrace(&error_state, "",__func__,__LINE__, __FILE__);
+        return -1;
+    }
+    return 0;
+}
+
+int f1(void){
+    printf("f1\n");
+    if (f2() == -1){
+        add_to_stacktrace(&error_state, "",__func__,__LINE__, __FILE__);
+        return -1;
+    }
+
+    return 0;
+}   
+
+
+int main(void){
+
+    init_error_state(&error_state);
+    if (f1() != 0){
+        print_stacktrace(&error_state);
+    }
 
 
     return 0;
-
 }
